@@ -3,11 +3,15 @@ import math
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 
+# Flask 애플리케이션 초기화
 app = Flask(__name__)
 # 보안 세션 키 초기화 (배포 시 환경 변수 설정 권장)
 app.config = os.environ.get('SECRET_KEY', 'ecm_research_portal_secure_key')
 
+# ==========================================
 # 1. 글로벌 네비게이션 라우팅 블록
+# ==========================================
+
 @app.route('/')
 def index():
     """메인 홈 화면: 연구포털의 핵심 비전과 기술 소개"""
@@ -30,17 +34,25 @@ def calculator():
 
 @app.route('/quiz')
 def quiz():
+    """퀴즈 화면"""
     return render_template('base.html', title="퀴즈")
 
 @app.route('/programs')
 def programs():
+    """프로그램 화면"""
     return render_template('base.html', title="프로그램")
 
 @app.route('/notice')
 def notice():
+    """공지사항 화면"""
     return render_template('base.html', title="공지사항")
 
+
+# ==========================================
 # 2. 파라미터 시뮬레이션 REST API 코어 연산 로직
+# ==========================================
+
+# [수정] methods에 추가
 @app.route('/api/simulate_ecm', methods=)
 def simulate_ecm():
     """
@@ -50,26 +62,31 @@ def simulate_ecm():
     try:
         data = request.get_json()
         
-        # 기본 파라미터 설정 (없을 경우 디폴트 튜닝 값 적용)
-        r0 = float(data.get('r0', 0.015))    # Ohmic Resistance (Ohms)
-        r1 = float(data.get('r1', 0.025))    # Polarization Resistance (Ohms)
-        c1 = float(data.get('c1', 1200))     # Polarization Capacitance (Farads)
-        current = float(data.get('current', -20)) # Discharge Current (Amps, 음수)
-        ocv_initial = 3.8 # Initial Open Circuit Voltage (V)
+        # 기본 파라미터 설정 (클라이언트 요청에 없을 경우 디폴트 튜닝 값 적용)
+        r0 = float(data.get('r0', 0.015))         # 오믹 저항 (Ohms)
+        r1 = float(data.get('r1', 0.025))         # 분극 저항 (Ohms)
+        c1 = float(data.get('c1', 1200))          # 분극 커패시턴스 (Farads)
+        current = float(data.get('current', -20)) # 방전 전류 (Amps, 방전 시 음수)
+        ocv_initial = 3.8                         # 초기 개방회로전압 (V)
         
         # 시간 배열 생성 (0 ~ 100초, 1초 간격)
         time_array = np.linspace(0, 100, 100)
+        
+        # [수정] 빈 리스트로 초기화 
         voltage_response =
         
-        # 수식 기반 전압 응답 시뮬레이션 연산
-        # V(t) = OCV - R0*I - R1*I*(1 - exp(-t/(R1*C1)))
-        tau = r1 * c1
+        # 1-RC 테브닌 모델 수식 기반 전압 응답 시뮬레이션 연산
+        # 지배 방정식: V(t) = OCV - R0*I - R1*I*(1 - exp(-t/(R1*C1)))
+        tau = r1 * c1 # 시정수(Time constant) 계산
         
         for t in time_array:
+            # 분극 전압 계산
             v_c1 = current * r1 * (1 - math.exp(-t / tau))
-            v_term = ocv_initial + (current * r0) + v_c1 # 방전 시 current가 음수이므로 전압 강하 발생
+            # 단자 전압 계산 (방전 시 current가 음수이므로 전압 강하 발생)
+            v_term = ocv_initial + (current * r0) + v_c1 
             voltage_response.append(round(v_term, 4))
             
+        # JSON 형태로 프론트엔드(Chart.js 등)에 응답 반환
         response_payload = {
             'status': 'success',
             'time': time_array.tolist(),
@@ -79,6 +96,11 @@ def simulate_ecm():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
+
+
+# ==========================================
+# 3. 애플리케이션 실행
+# ==========================================
 
 if __name__ == '__main__':
     # 개발 및 테스트를 위한 로컬 웹 서버 구동 (포트 5000)

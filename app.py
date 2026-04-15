@@ -1,78 +1,85 @@
-import streamlit as st
+import os
+import math
+import numpy as np
+from flask import Flask, render_template, request, jsonify
 
-# 1. 페이지 기본 설정
-st.set_page_config(
-    page_title="배터리 등가회로 연구포털",
-    page_icon="🔋",
-    layout="wide"
-)
+app = Flask(__name__)
+# 보안 세션 키 초기화 (배포 시 환경 변수 설정 권장)
+app.config = os.environ.get('SECRET_KEY', 'ecm_research_portal_secure_key')
 
-# 2. 상단 헤더 및 타이틀 영역 (요청하신 텍스트 반영)
-st.title("🔋 배터리 등가회로 연구포털")
-st.subheader("배터리 등가회로를 결정하는 핵심 기술")
-st.markdown("---")
+# 1. 글로벌 네비게이션 라우팅 블록
+@app.route('/')
+def index():
+    """메인 홈 화면: 연구포털의 핵심 비전과 기술 소개"""
+    return render_template('index.html', title="홈")
 
-# 3. 메인 이미지 영역 (AI 이미지 생성 프롬프트 기반의 대체 이미지)
-# 프롬프트: "Create a modern, clean digital illustration in a style similar to `image_cf8d33.png`. The image should depict a stylized lithium-ion battery from a cutaway perspective. Within and around the battery structure, illustrate key equivalent circuit model elements..."
-st.image(
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop", 
-    caption="배터리 등가회로 시각화 (AI Generated Placeholder)", 
-    use_container_width=True
-)
+@app.route('/learning')
+def learning():
+    """주제별 학습 화면: 등가회로의 종류 및 이론적 배경 제공"""
+    return render_template('learning.html', title="주제별 학습")
 
-# 4. 네비게이션 탭 구성 (HTML의 메뉴 역할)
-tab1, tab2, tab3 = st.tabs(["🏠 홈", "📖 주제별 학습", "🧮 파라미터 계산기"])
+@app.route('/formulas')
+def formulas():
+    """수식 모음 화면: State-space 방정식을 비롯한 수학적 레퍼런스"""
+    return render_template('base.html', title="수식 모음")
 
-# 첫 번째 탭: 홈
-with tab1:
-    st.markdown("### 📌 포털 소개")
-    st.write("""
-    배터리 등가회로 연구포털에 오신 것을 환영합니다. 
-    
-    본 포털은 전기차, 에너지 저장 장치 등 현대 사회의 핵심 기술인 배터리의 성능과 상태를 정확하게 모델링하고 예측하기 위한 필수 기술인 **'등가회로 모델(Equivalent Circuit Model, ECM)'**에 대한 연구 정보를 제공합니다. 
-    
-    등가회로는 복잡한 배터리의 전기화학적 특성을 직관적이고 계산이 용이한 회로 소자로 표현하여, BMS(Battery Management System) 알고리즘 개발의 기반이 됩니다.
-    """)
+@app.route('/calculator')
+def calculator():
+    """파라미터 계산기 화면: 시각화 차트가 포함된 대시보드 렌더링"""
+    return render_template('calculator.html', title="파라미터 계산기")
 
-# 두 번째 탭: 주제별 학습
-with tab2:
-    st.markdown("### 📚 주제별 학습")
-    
-    # 두 개의 열로 나누어 카드 형태로 배치
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        with st.expander("2.1 개방회로 전압 (OCV)"):
-            st.write("무부하 평형 상태의 단자 전압. 배터리 SoC 추정의 핵심 기준값입니다.")
-            st.code("v(t) = OCV(z(t))", language="python")
-            
-        with st.expander("2.2 충전 상태 의존성 (SoC)"):
-            st.write("현재 잔존 전하량 정량화. 쿨롱 카운팅과 이산시간 변환을 학습합니다.")
-            
-    with col2:
-        with st.expander("2.3 등가 직렬 저항 (ESR)"):
-            st.write("전류 인가 직후 순간 전압 강하로 측정하며, 저온에서 크게 증가합니다.")
-            
-        with st.expander("2.4 확산 전압 (Diffusion)"):
-            st.write("리튬 이온 농도 구배로 발생하는 느린 동적 전압 현상입니다. RC 회로로 근사합니다.")
+@app.route('/quiz')
+def quiz():
+    return render_template('base.html', title="퀴즈")
 
-# 세 번째 탭: 파라미터 계산기 (Streamlit의 장점인 인터랙티브 기능)
-with tab3:
-    st.markdown("### ⚡ 간단한 RC 파라미터 계산기")
-    st.write("아래에 값을 입력하여 시정수(τ)를 즉시 계산해 보세요.")
-    
-    calc_col1, calc_col2 = st.columns(2)
-    with calc_col1:
-        r1 = st.number_input("R₁ 분극 저항 (mΩ)", value=15.8, step=0.1)
-    with calc_col2:
-        c1 = st.number_input("C₁ 분극 커패시턴스 (F)", value=38000, step=1000)
+@app.route('/programs')
+def programs():
+    return render_template('base.html', title="프로그램")
+
+@app.route('/notice')
+def notice():
+    return render_template('base.html', title="공지사항")
+
+# 2. 파라미터 시뮬레이션 REST API 코어 연산 로직
+@app.route('/api/simulate_ecm', methods=)
+def simulate_ecm():
+    """
+    클라이언트에서 전달받은 ECM 파라미터(R0, R1, C1, 전류)를 기반으로
+    100초 동안의 이산화된 1-RC 테브닌 모델 전압 응답을 계산하여 반환함.
+    """
+    try:
+        data = request.get_json()
         
-    if st.button("계산하기"):
-        # 저항 단위를 mΩ에서 Ω으로 변환하여 계산
-        tau = (r1 / 1000) * c1
-        st.success(f"**시정수 τ = R₁ × C₁ = {tau:.1f} 초**")
-        st.info(f"💡 4τ (98% 수렴 시간) = {4*tau:.1f} 초 (약 {round((4*tau)/60)}분)")
+        # 기본 파라미터 설정 (없을 경우 디폴트 튜닝 값 적용)
+        r0 = float(data.get('r0', 0.015))    # Ohmic Resistance (Ohms)
+        r1 = float(data.get('r1', 0.025))    # Polarization Resistance (Ohms)
+        c1 = float(data.get('c1', 1200))     # Polarization Capacitance (Farads)
+        current = float(data.get('current', -20)) # Discharge Current (Amps, 음수)
+        ocv_initial = 3.8 # Initial Open Circuit Voltage (V)
+        
+        # 시간 배열 생성 (0 ~ 100초, 1초 간격)
+        time_array = np.linspace(0, 100, 100)
+        voltage_response =
+        
+        # 수식 기반 전압 응답 시뮬레이션 연산
+        # V(t) = OCV - R0*I - R1*I*(1 - exp(-t/(R1*C1)))
+        tau = r1 * c1
+        
+        for t in time_array:
+            v_c1 = current * r1 * (1 - math.exp(-t / tau))
+            v_term = ocv_initial + (current * r0) + v_c1 # 방전 시 current가 음수이므로 전압 강하 발생
+            voltage_response.append(round(v_term, 4))
+            
+        response_payload = {
+            'status': 'success',
+            'time': time_array.tolist(),
+            'voltage': voltage_response
+        }
+        return jsonify(response_payload)
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400
 
-# 5. 푸터
-st.markdown("---")
-st.markdown("<p style='text-align: center; color: gray;'>&copy; 2026 배터리 등가회로 연구포털. All rights reserved.</p>", unsafe_allow_html=True)
+if __name__ == '__main__':
+    # 개발 및 테스트를 위한 로컬 웹 서버 구동 (포트 5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)

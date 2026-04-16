@@ -689,7 +689,9 @@ for ci,(k,v) in enumerate(pages):
 with nc[6]:
     if st.button("🌙" if not S.dark else "☀️",key="dm",use_container_width=True): S.dark=not S.dark; st.rerun()
 with nc[7]:
-    if st.button("🌐",key="lang",use_container_width=True): S.lang="en" if S.lang=="ko" else "ko"; st.rerun()
+    if st.button("🌐", key="lang_btn", use_container_width=True):
+    S.lang = "en" if S.lang == "ko" else "ko"
+    st.rerun()
 with nc[8]:
     if st.button("🖨 PDF",key="pdf",use_container_width=True): st.toast("브라우저 Ctrl+P(Cmd+P)로 PDF 저장하세요.")
 st.markdown("<div style='height:4px;'></div>",unsafe_allow_html=True)

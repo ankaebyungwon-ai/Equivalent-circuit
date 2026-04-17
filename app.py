@@ -66,24 +66,63 @@ def _b64(img):
 @st.cache_data
 def make_hero():
     w, h = 1600, 720
-    img = Image.new("RGB", (w, h))
-    draw = ImageDraw.Draw(img)
+
+    # numpy로 부드러운 2D 그라디언트
+    arr = np.zeros((h, w, 3), dtype=np.uint8)
     for y in range(h):
         t = y / h
-        r = int(7  + t * 10); g = int(14 + t * 18); b = int(24 + t * 32)
-        draw.line([(0, y), (w, y)], fill=(r, g, b))
+        for x in range(w):
+            tx = x / w
+            r = int(6  + tx * 6  + t * 5)
+            g = int(12 + tx * 8  + t * 10)
+            b = int(32 + tx * 20 + t * 18)
+            arr[y, x] = [min(255,r), min(255,g), min(255,b)]
+
+    img = Image.fromarray(arr, 'RGB')
+    draw = ImageDraw.Draw(img)
+
+    # 미세 격자 (거의 안 보이는 수준)
+    gc = (18, 38, 58)
     for x in range(0, w, 80):
-        draw.line([(x, 0), (x, h)], fill=(40, 40, 40))
+        draw.line([(x, 0), (x, h)], fill=gc, width=1)
     for y2 in range(0, h, 80):
-        draw.line([(0, y2), (w, y2)], fill=(40, 40, 40))
-    lc = (45, 212, 191)
-    segs = [(920,90,1100,90),(1100,90,1100,220),(1100,220,1260,220),
-            (860,320,1020,320),(1020,320,1020,460),(1020,460,1180,460)]
-    for x0,y0,x1,y1 in segs:
-        draw.line([(x0,y0),(x1,y1)], fill=lc, width=2)
-    for cx,cy in [(1100,90),(1100,220),(1020,320),(1020,460)]:
-        draw.ellipse([cx-7,cy-7,cx+7,cy+7], fill=lc)
-    return _b64(img.filter(ImageFilter.GaussianBlur(1)))
+        draw.line([(0, y2), (w, y2)], fill=gc, width=1)
+
+    # 틸 컬러 블렌딩 헬퍼 (반투명 효과)
+    teal = (45, 212, 191)
+    def blend(yx, teal_color, alpha):
+        yc, xc = yx
+        yc = max(0, min(h-1, yc)); xc = max(0, min(w-1, xc))
+        bg = arr[yc, xc].tolist()
+        return tuple(int(bg[i]*(1-alpha) + teal_color[i]*alpha) for i in range(3))
+
+    # 회로 라인 (오른쪽 상단)
+    lines = [
+        (1000, 90, 1180, 90, 2, 0.55),
+        (1180, 90, 1180, 200, 2, 0.55),
+        (1180, 200, 1380, 200, 2, 0.55),
+        (940, 300, 1100, 300, 1, 0.30),
+        (1100, 300, 1100, 420, 1, 0.30),
+        (1100, 420, 1300, 420, 1, 0.30),
+        (1300, 140, 1480, 140, 1, 0.22),
+        (1300, 140, 1300, 330, 1, 0.22),
+    ]
+    for x0,y0,x1,y1,wd,alpha in lines:
+        lc = blend(((y0+y1)//2, (x0+x1)//2), teal, alpha)
+        draw.line([(x0,y0),(x1,y1)], fill=lc, width=wd)
+
+    # 노드 점
+    for cx,cy,alpha in [(1180,90,0.70),(1180,200,0.70),(1100,300,0.45),(1100,420,0.45)]:
+        nc = blend((cy, cx), teal, alpha)
+        draw.ellipse([cx-5,cy-5,cx+5,cy+5], fill=nc)
+
+    # 저항 박스
+    for rx, ry, alpha in [(1220, 82, 0.50), (1140, 292, 0.30)]:
+        bc = blend((ry+7, rx+22), (8, 20, 45), 0.92)
+        oc = blend((ry+7, rx+22), teal, alpha)
+        draw.rectangle([(rx, ry), (rx+44, ry+14)], fill=bc, outline=oc, width=1)
+
+    return _b64(img.filter(ImageFilter.GaussianBlur(0.6)))
 
 @st.cache_data
 def make_why_photo():
